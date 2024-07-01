@@ -1,0 +1,7 @@
+## This script is used to view the CPSD matrix that was saved in npz format.
+
+data = load('Your_file.npz')
+list = data.files
+for cpsd in list:
+    print(cpsd)
+    print(data[cpsd])

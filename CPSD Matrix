@@ -53,7 +53,7 @@ specification = specification.astype(complex)
 print('Specification Shape: {}'.format(specification.shape))
 
 # Save CPSD for Rattlesnake
-np.savez('rattlesnake2_specification.npz',
+np.savez('Your_File.npz',
          f=frequency_vector,
          cpsd=specification)
 

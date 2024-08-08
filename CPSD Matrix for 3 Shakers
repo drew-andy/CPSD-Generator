@@ -1,0 +1,108 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Adjust breakpoints for Shaker 1 here as necessary
+breakpoints_shaker1 = [
+    (15,  0.04),
+    (74, 0.04),
+    (300, 0.24),
+    (1000, 0.24),
+    (2000, 0.00064)]
+
+# Adjust breakpoints for Shaker 2 here as necessary
+breakpoints_shaker2 = [
+    (10,  0.02),
+    (31, 0.02),
+    (100, 0.22),
+    (500, 0.22),
+    (2000, 0.00064)]
+
+breakpoints_shaker3 = [
+    (10,  0.05),
+    (31, 0.05),
+    (100, 0.45),
+    (500, 0.45),
+    (2000, 0.00085)]
+
+frequency_resolution = 2  # Hz frequency spacing
+
+# Generate frequency vector
+breakpoints_shaker1 = np.array(breakpoints_shaker1)
+breakpoints_shaker2 = np.array(breakpoints_shaker2)
+breakpoints_shaker3 = np.array(breakpoints_shaker3)
+
+
+breakpoint_frequencies1_2 = np.union1d(breakpoints_shaker1[:, 0], breakpoints_shaker2[:, 0])
+breakpoint_frequencies = np.union1d(breakpoint_frequencies1_2, breakpoints_shaker3[:, 0])
+
+
+frequency_vector = np.arange(breakpoint_frequencies[0],  # Start frequency
+                             breakpoint_frequencies[-1] + frequency_resolution * 0.0001,  # Add a small offset
+                             frequency_resolution)  # Frequency step
+
+# Plot the breakpoints for reference
+plt.figure()
+plt.loglog(breakpoints_shaker1[:, 0], breakpoints_shaker1[:, 1], label='Shaker 1')
+plt.loglog(breakpoints_shaker2[:, 0], breakpoints_shaker2[:, 1], label='Shaker 2')
+plt.loglog(breakpoints_shaker3[:, 0], breakpoints_shaker3[:, 1], label='Shaker 3')
+plt.ylim(0.001, 0.5)
+plt.xlim(10, 2000)
+plt.legend()
+plt.title('Breakpoints')
+
+# Interpolate on a log-log scale for Shaker 1
+log_frequency_vector = np.log(frequency_vector)
+log_breakpoints_shaker1 = np.log(breakpoints_shaker1)
+log_specification_shaker1 = np.interp(log_frequency_vector,
+                                     log_breakpoints_shaker1[:, 0],
+                                     log_breakpoints_shaker1[:, 1])
+specification_shaker1 = np.exp(log_specification_shaker1)
+
+# Interpolate on a log-log scale for Shaker 2
+log_breakpoints_shaker2 = np.log(breakpoints_shaker2)
+log_specification_shaker2 = np.interp(log_frequency_vector,
+                                     log_breakpoints_shaker2[:, 0],
+                                     log_breakpoints_shaker2[:, 1])
+specification_shaker2 = np.exp(log_specification_shaker2)
+
+log_breakpoints_shaker3 = np.log(breakpoints_shaker3)
+log_specification_shaker3 = np.interp(log_frequency_vector,
+                                     log_breakpoints_shaker3[:, 0],
+                                     log_breakpoints_shaker3[:, 1])
+specification_shaker3 = np.exp(log_specification_shaker3)
+
+
+# Plot interpolated specifications
+plt.figure()
+plt.loglog(frequency_vector, specification_shaker1, 'r.', label='Shaker 1')
+plt.loglog(frequency_vector, specification_shaker2, 'b.', label='Shaker 2')
+plt.loglog(frequency_vector, specification_shaker3, 'c.', label='Shaker 3')
+plt.legend()
+plt.title('Interpolated Specifications')
+
+# Shape the specification array for 2 shakers and 4 channels (responses)
+
+num_outputs = 3  # Number of responses (outputs)
+
+# Reshape specifications for both shakers
+specification_shaker1 = specification_shaker1[:, np.newaxis, np.newaxis]  # nf x 1 x 1 to  (frequency x Shaker# x #Response)
+specification_shaker1 = np.tile(specification_shaker1, (2, 1, num_outputs))  # nf x 1 x 4
+
+specification_shaker2 = specification_shaker2[:, np.newaxis, np.newaxis]  # nf x 1 x 1 to  (frequency x Shaker# x #Response)
+specification_shaker2 = np.tile(specification_shaker2, (2, 1, num_outputs))  # nf x 1 x 4
+
+specification_shaker3 = specification_shaker3[:, np.newaxis, np.newaxis]  # nf x 1 x 1 to  (frequency x Shaker# x #Response)
+specification_shaker3 = np.tile(specification_shaker3, (2, 1, num_outputs))  # nf x 1 x 4
+
+# Combine specifications for both shakers into one CPSD matrix
+specification = np.concatenate((specification_shaker1, specification_shaker2, specification_shaker3), axis=1)  # nf x 2 x 4
+
+# Make CPSDs complex
+specification = specification.astype(complex)
+
+print('Specification Shape: {}'.format(specification.shape))
+
+# Save CPSD for MIMO Random Vibration
+np.savez('MIMO_CPSD3s.npz',
+         f=frequency_vector,
+         cpsd=specification)
